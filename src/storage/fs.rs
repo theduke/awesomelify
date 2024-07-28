@@ -43,7 +43,7 @@ impl FsStore {
         &self,
         ident: &RepoIdent,
     ) -> Result<Option<RepoDetailsItem>, anyhow::Error> {
-        let path = self.repo_details_path(&ident);
+        let path = self.repo_details_path(ident);
         match std::fs::read(&path) {
             Ok(data) => {
                 let details = serde_json::from_slice(&data)?;

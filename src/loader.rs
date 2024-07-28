@@ -190,12 +190,10 @@ impl Loader {
 
                 let details = if allow_source_refresh {
                     self.load_repo_details(&link.ident).await
+                } else if let Some(x) = self.store.repo_details(ident.clone()).await? {
+                    Ok(x)
                 } else {
-                    if let Some(x) = self.store.repo_details(ident.clone()).await? {
-                        Ok(x)
-                    } else {
-                        continue;
-                    }
+                    continue;
                 };
 
                 match details {

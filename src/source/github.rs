@@ -82,24 +82,22 @@ impl GithubClient {
 
         let res = builder.send().await?;
         let status = res.status();
-        if !status.is_success() {
-            if status == 403 || status == 429 {
-                let reset_at = res
-                    .headers()
-                    .get("x-ratelimit-reset")
-                    .and_then(|x| x.to_str().ok())
-                    .and_then(|x| x.parse::<u64>().ok());
+        if !status.is_success() && (status == 403 || status == 429) {
+            let reset_at = res
+                .headers()
+                .get("x-ratelimit-reset")
+                .and_then(|x| x.to_str().ok())
+                .and_then(|x| x.parse::<u64>().ok());
 
-                if let Some(reset) = reset_at {
-                    let reset_at = SystemTime::UNIX_EPOCH + Duration::from_secs(reset);
-                    self.set_rate_limited_until(reset_at);
+            if let Some(reset) = reset_at {
+                let reset_at = SystemTime::UNIX_EPOCH + Duration::from_secs(reset);
+                self.set_rate_limited_until(reset_at);
 
-                    return Err(RateLimitError {
-                        message: "Github API rate limit exceeded".to_string(),
-                        reset_at: Some(reset_at),
-                    }
-                    .into());
+                return Err(RateLimitError {
+                    message: "Github API rate limit exceeded".to_string(),
+                    reset_at: Some(reset_at),
                 }
+                .into());
             }
         }
         Ok(res)
@@ -213,7 +211,7 @@ impl GithubClient {
                 .latest_merged_pull_request
                 .nodes
                 .first()
-                .map(|x| x.merged_at.clone()),
+                .map(|x| x.merged_at),
             primary_language: repo.primary_language.map(|x| x.name),
             languages: repo
                 .languages
@@ -263,7 +261,7 @@ mod query_repo_details {
     use serde::Deserialize;
     use time::OffsetDateTime;
 
-    pub const REPO_DETAILS_QUERY: &'static str = r#"
+    pub const REPO_DETAILS_QUERY: &str = r#"
 query ($owner: String!, $repo: String!) {
   repository(owner: $owner, name: $repo) {
     owner {

@@ -11,9 +11,9 @@ use crate::server::routes::{
 
 use super::HtmlError;
 
-const SOURCE_REPO: &'static str = "https://github.com/theduke/awesomelify";
-const FA_GITHUB: &'static str = "fa-brands fa-github";
-const FA_STAR: &'static str = "fa-solid fa-star has-text-warning";
+const SOURCE_REPO: &str = "https://github.com/theduke/awesomelify";
+const FA_GITHUB: &str = "fa-brands fa-github";
+const FA_STAR: &str = "fa-solid fa-star has-text-warning";
 
 fn source_icon_class(source: &Source) -> &'static str {
     match source {
@@ -62,7 +62,7 @@ impl LinkTree {
         }
     }
 
-    fn new_child(section: &Vec<String>) -> Self {
+    fn new_child(section: &[String]) -> Self {
         let mut tree = Self::new_root();
 
         if let Some(name) = section.last() {
@@ -71,7 +71,7 @@ impl LinkTree {
             let id = Self::name_to_id(name);
             tree.id = Some(id);
 
-            tree.section = section.clone();
+            tree.section = section.to_vec();
         }
 
         tree
@@ -800,7 +800,9 @@ pub fn render_repo_page(mut repo: FullReadmeRepo, query: RepoPageQuery) -> Strin
         }
     };
 
-    let output = rsx! {
+    
+
+    rsx! {
         PageLayout {
             title: &repo.repo.details.ident.repo,
             ReadmeRepoPage {
@@ -810,9 +812,7 @@ pub fn render_repo_page(mut repo: FullReadmeRepo, query: RepoPageQuery) -> Strin
             }
         }
     }
-    .render();
-
-    output
+    .render()
 }
 
 #[component]

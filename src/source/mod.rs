@@ -187,7 +187,7 @@ impl RepoDetails {
     pub fn last_activity(&self) -> Option<&OffsetDateTime> {
         self.last_pushed_at
             .as_ref()
-            .or_else(|| self.last_pullrequest_merged_at.as_ref())
+            .or(self.last_pullrequest_merged_at.as_ref())
     }
 
     pub fn last_activity_relative_time(&self) -> Option<String> {
