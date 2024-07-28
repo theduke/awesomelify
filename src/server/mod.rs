@@ -1,7 +1,7 @@
 mod routes;
 mod ui;
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
 
 use anyhow::Context;
 use axum::{http::StatusCode, routing::get, Router};
@@ -75,6 +75,11 @@ async fn run_server(addr: SocketAddr, ctx: Ctx) -> Result<(), anyhow::Error> {
                 .on_response(
                     tower_http::trace::DefaultOnResponse::new().level(tracing::Level::INFO),
                 ),
+        )
+        .layer(
+            // Graceful shutdown will wait for outstanding requests to complete.
+            // Add a timeout so requests don't hang forever.
+            tower_http::timeout::TimeoutLayer::new(Duration::from_secs(30)),
         );
 
     tracing::info!("starting server: {}", addr);
@@ -84,7 +89,36 @@ async fn run_server(addr: SocketAddr, ctx: Ctx) -> Result<(), anyhow::Error> {
         .await
         .context("could not bind port")?;
 
-    axum::serve(listener, app).await.context("server failed")
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .context("server failed")
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    tracing::info!("received shutdown signal");
 }
 
 struct HtmlError {
