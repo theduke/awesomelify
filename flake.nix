@@ -22,8 +22,6 @@
         hasPrefix = lib.hasPrefix;
       in
       rec {
-
-
         packages.${NAME} = pkgs.rustPlatform.buildRustPackage rec {
           pname = NAME;
           version = VERSION;
@@ -66,6 +64,16 @@
           drv = packages.${NAME};
         };
         defaultApp = apps.${NAME};
+
+        packages.dockerImage = pkgs.dockerTools.buildImage {
+          name = "theduke/${NAME}";
+          copyToRoot = [
+            packages.${NAME}
+          ];
+          config = {
+            Cmd = [ "/bin/awesomelify" "serve" ];
+          };
+        };
 
         devShell = pkgs.mkShell {
           env.RUST_LOG = "awesomelify=trace,reels_db=trace,info";

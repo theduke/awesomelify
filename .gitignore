@@ -16,3 +16,6 @@ bun.lockb
 /data
 .envrc
 .direnv
+
+# Nix build output
+/result
