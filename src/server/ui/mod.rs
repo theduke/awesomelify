@@ -724,10 +724,17 @@ fn NavBar() -> Element {
 
                 div {
                     class: "navbar-start",
+
                     a {
                         class: "navbar-item",
                         href: "/",
                         "Home"
+                    }
+
+                    a {
+                        class: "navbar-item",
+                        href: "/lists",
+                        "Awesome Lists"
                     }
                 }
 
@@ -800,9 +807,7 @@ pub fn render_repo_page(mut repo: FullReadmeRepo, query: RepoPageQuery) -> Strin
         }
     };
 
-    
-
-    rsx! {
+    let node = rsx! {
         PageLayout {
             title: &repo.repo.details.ident.repo,
             ReadmeRepoPage {
@@ -811,8 +816,8 @@ pub fn render_repo_page(mut repo: FullReadmeRepo, query: RepoPageQuery) -> Strin
                 query: query,
             }
         }
-    }
-    .render()
+    };
+    node.render()
 }
 
 #[component]
@@ -953,8 +958,12 @@ fn Homepage(popular_repos: Vec<Arc<FullReadmeRepo>>) -> Element {
                 class: "columns is-multiline",
 
                 for repo in popular_repos {
-                    RepoLinkBox {
-                        repo: &repo,
+                    div {
+                        class: "column is-one-third",
+
+                        RepoLinkBox {
+                            repo: &repo,
+                        }
                     }
                 }
             }
@@ -973,68 +982,65 @@ fn RepoLinkBox<'a>(repo: &'a FullReadmeRepo) -> Element {
 
     rsx! {
         div {
-            class: "column is-one-third",
+            class: "box is-flex is-flex-direction-column",
+            style: "gap: 0.7rem;",
+
             div {
-                class: "box is-flex is-flex-direction-column",
-                style: "gap: 0.7rem;",
+                a {
+                    href: "{link}",
+                    class: "has-text-black is-underlined",
+                    style: "font-size: 1.4rem;",
 
-                div {
-                    a {
-                        href: "{link}",
-                        class: "has-text-black is-underlined",
-                        style: "font-size: 1.4rem;",
-
-                        span {
-                            class: "icon",
-                            i {
-                                class: "{icon}",
-                            }
-                        }
-
-                        span {
-                            class: "pl-3",
-                            "{ident.name()}"
-                        }
-
-                    }
-                }
-
-                p {
-                    "{details.description.as_deref().unwrap_or_default()}"
-                }
-
-                div {
-                    class: "is-flex",
-                    style: "gap: 0.7rem",
-
-                    button {
-                        class: "button is-small is-outlined has-text-black",
-                        span {
-                            class: "icon",
-                            i {
-                                class: "fa-solid fa-list",
-                            }
-                        }
-                        span {
-                            "{repo.links.len()} repos"
+                    span {
+                        class: "icon",
+                        i {
+                            class: "{icon}",
                         }
                     }
 
-                    button {
-                        class: "button is-small is-outlined has-text-black",
-                        span {
-                            class: "icon",
-                            i {
-                                class: "{FA_STAR}",
-                            }
+                    span {
+                        class: "pl-3",
+                        "{ident.name()}"
+                    }
+
+                }
+            }
+
+            p {
+                "{details.description.as_deref().unwrap_or_default()}"
+            }
+
+            div {
+                class: "is-flex",
+                style: "gap: 0.7rem",
+
+                button {
+                    class: "button is-small is-outlined has-text-black",
+                    span {
+                        class: "icon",
+                        i {
+                            class: "fa-solid fa-list",
                         }
-                        span {
-                            "{pretty_number(details.stargazer_count)} stars"
+                    }
+                    span {
+                        "{repo.links.len()} repos"
+                    }
+                }
+
+                button {
+                    class: "button is-small is-outlined has-text-black",
+                    span {
+                        class: "icon",
+                        i {
+                            class: "{FA_STAR}",
                         }
+                    }
+                    span {
+                        "{pretty_number(details.stargazer_count)} stars"
                     }
                 }
             }
-        }
+    }
     }
 }
 
@@ -1045,6 +1051,35 @@ pub fn render_homepage(popular_repos: Vec<Arc<FullReadmeRepo>>) -> String {
             Homepage {
                 popular_repos: popular_repos,
             }
+        }
+    };
+
+    output.render()
+}
+
+#[component]
+pub fn ReadmeListPage(repos: Vec<Arc<FullReadmeRepo>>) -> String {
+    rsx! {
+        PageLayout {
+            title: "awesomelify - awesome- Link List Viewer",
+            div {
+                class: "is-flex is-flex-direction-column",
+                style: "gap: 1rem;",
+
+                for repo in repos {
+                    RepoLinkBox {
+                        repo: &repo,
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn render_readme_list_page(repos: Vec<Arc<FullReadmeRepo>>) -> String {
+    let output = rsx! {
+        ReadmeListPage {
+            repos: repos,
         }
     };
 

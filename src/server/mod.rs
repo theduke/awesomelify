@@ -55,12 +55,16 @@ async fn run_server(addr: SocketAddr, ctx: Ctx) -> Result<(), anyhow::Error> {
     let app = Router::new()
         .route("/", get(routes::homepage::handler_homepage))
         .route(
-            "/repo/:source/:owner/:repo",
-            get(routes::repo_page::handler_repo),
-        )
-        .route(
             routes::search::PATH_SEARCH,
             get(routes::search::handler_search),
+        )
+        .route(
+            routes::repo_list::PATH_README_LIST,
+            get(routes::repo_list::handler_readme_list),
+        )
+        .route(
+            "/repo/:source/:owner/:repo",
+            get(routes::repo_page::handler_repo),
         )
         .with_state(ctx)
         .layer(
