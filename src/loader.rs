@@ -107,8 +107,8 @@ impl Loader {
             cache: Cache::new(),
             tasks: TaskQueue::new(),
             memory_update_time: Duration::from_secs(60),
-            // FIXME: appropriate time
-            readme_storage_refresh_time: Duration::from_secs(60 * 30),
+            // 5 days
+            readme_storage_refresh_time: Duration::from_secs(60 * 60 * 24 * 5),
         }
     }
 
