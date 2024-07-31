@@ -40,5 +40,24 @@ test-ci:
 # Run all lints and tests to ensure CI will pass.
 prepush: lint test
 
+# Build the Docker image through the nix flake, and push the image to the
+# production flag.
+# This is equivalent to "deploy", since the server will automaitcally switch
+# to the current production tag.
 deploy:
-  ./infra/deploy.sh
+  #!/usr/bin/env bash
+  set -Eeuxo pipefail
+
+  TAG_PROD="theduke/awesomelify:production"
+
+  echo "Building docker image..."
+  nix build .#dockerImage
+  echo "Image built ... loading image"
+  IMAGE=$(docker load -i ./result --quiet | awk '{ print $3 }')
+  echo "Loaded image: $IMAGE"
+  echo "Tagging production..."
+  docker tag "$IMAGE" $TAG_PROD
+  echo "Pushing image..."
+  docker push $TAG_PROD
+  echo "Tag $TAG_PROD pushed!"
+
