@@ -1,0 +1,41 @@
+name: quantum
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+# Automatically cancel previous workflow runs when a new commit is pushed.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint_build_test:
+    name: lint_build_test
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        rust: [stable]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust tools
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-udeps,cargo-deny,nextest,just,cargo-llvm-cov
+
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+
+    - name: Lint
+      run: just lint
+
+    - name: Build
+      run: just build-debug
+
+    - name: Test
+      run: just test-ci

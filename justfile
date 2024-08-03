@@ -7,6 +7,12 @@ default:
 serve:
   cargo watch -x "run -- serve"
 
+build-debug:
+  cargo build
+
+build-release:
+  cargo build --release
+
 lint: lint-fmt lint-rust lint-clippy
 
 lint-fmt:
@@ -38,7 +44,7 @@ test-ci:
   cargo test --doc
 
 # Run all lints and tests to ensure CI will pass.
-prepush: lint test
+prepush: lint test-ci
 
 # Build the Docker image through the nix flake, and push the image to the
 # production flag.
