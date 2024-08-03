@@ -5,7 +5,7 @@ use crate::{
     storage::{Item, Storage},
 };
 
-pub const PATH_API_IMPORT: &'static str = "/api/v1/import";
+pub const PATH_API_IMPORT: &str = "/api/v1/import";
 
 #[derive(serde::Serialize)]
 pub struct ImportResult {}
