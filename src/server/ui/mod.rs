@@ -651,8 +651,16 @@ fn LinksTable<'a>(links: &'a [FullRepoLink], show_category: bool) -> Element {
 #[component]
 pub fn PageLayout<'a>(title: &'a str, children: Element<'a>) -> Element {
     rsx! {
+        doctype {}
         html {
             head {
+                meta {
+                    charset: "utf-8",
+                }
+                meta {
+                    name: "viewport",
+                    content: "width=device-width, initial-scale=1",
+                }
                 link {
                     rel: "stylesheet",
                     href: "https://cdn.jsdelivr.net/npm/bulma@1.0.1/css/bulma.min.css",
@@ -954,15 +962,25 @@ fn Homepage(popular_repos: Vec<Arc<FullReadmeRepo>>) -> Element {
                 "Popular lists"
             }
 
-            div {
-                class: "columns is-multiline",
+            if popular_repos.is_empty() {
+                div {
+                    class: "is-flex is-align-items-center is-justify-content-center",
+                    p {
+                        class: "notification is-warning",
+                        "No repos found."
+                    }
+                }
+            } else {
+                div {
+                    class: "columns is-multiline",
 
-                for repo in popular_repos {
-                    div {
-                        class: "column is-one-third",
+                    for repo in popular_repos {
+                        div {
+                            class: "column is-one-third",
 
-                        RepoLinkBox {
-                            repo: &repo,
+                            RepoLinkBox {
+                                repo: &repo,
+                            }
                         }
                     }
                 }
