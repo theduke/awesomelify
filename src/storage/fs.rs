@@ -4,6 +4,8 @@ use anyhow::Context;
 
 use crate::source::{ReadmeRepo, RepoDetailsItem, RepoIdent};
 
+use super::Item;
+
 #[derive(Clone, Debug)]
 pub struct FsStore {
     root: PathBuf,
@@ -213,5 +215,76 @@ impl super::Storage for FsStore {
         }
 
         Ok(list)
+    }
+
+    async fn export(&self) -> Result<Vec<Item>, anyhow::Error> {
+        let details = self.repo_details_list().await?.into_iter().map(Item::Repo);
+        let readmes = self
+            .readme_repo_list()
+            .await?
+            .into_iter()
+            .map(Item::ReadmeRepo);
+
+        let items = details.chain(readmes).collect();
+        Ok(items)
+    }
+
+    async fn import(&self, items: Vec<Item>) -> Result<(), anyhow::Error> {
+        let mut inserted = 0;
+        let mut skipped = 0;
+
+        for item in items {
+            match item {
+                Item::Repo(imported) => {
+                    let existing = self.repo_details(imported.ident().clone()).await?;
+
+                    let should_insert = match (&imported, &existing) {
+                        (RepoDetailsItem::Found(_), Some(RepoDetailsItem::NotFound { .. })) => true,
+                        (RepoDetailsItem::Found(new), Some(RepoDetailsItem::Found(old))) => {
+                            new.updated_at > old.updated_at
+                        }
+                        (
+                            RepoDetailsItem::NotFound {
+                                updated_at: new, ..
+                            },
+                            Some(RepoDetailsItem::NotFound {
+                                updated_at: old, ..
+                            }),
+                        ) => new > old,
+                        (RepoDetailsItem::NotFound { .. }, Some(RepoDetailsItem::Found(_))) => {
+                            false
+                        }
+
+                        (_, None) => true,
+                    };
+
+                    if should_insert {
+                        self.repo_details_upsert(imported).await?;
+                        inserted += 1;
+                    } else {
+                        skipped += 1;
+                    }
+                }
+                Item::ReadmeRepo(imported) => {
+                    let old = self.readme_repo(imported.details.ident.clone()).await?;
+
+                    let should_insert = match old {
+                        Some(old) => imported.updated_at > old.updated_at,
+                        None => true,
+                    };
+
+                    if should_insert {
+                        self.readme_repo_upsert(imported).await?;
+                        inserted += 1;
+                    } else {
+                        skipped += 1;
+                    }
+                }
+            }
+        }
+
+        tracing::info!(%skipped, %inserted, "import complete");
+
+        Ok(())
     }
 }

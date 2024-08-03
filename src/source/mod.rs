@@ -236,6 +236,29 @@ impl RepoDetailsItem {
             RepoDetailsItem::NotFound { ident, .. } => ident,
         }
     }
+
+    /// Returns `true` if the repo details item is [`NotFound`].
+    ///
+    /// [`NotFound`]: RepoDetailsItem::NotFound
+    #[must_use]
+    pub fn is_not_found(&self) -> bool {
+        matches!(self, Self::NotFound { .. })
+    }
+
+    pub fn updated_at(&self) -> OffsetDateTime {
+        match self {
+            Self::Found(x) => x.updated_at,
+            Self::NotFound { updated_at, .. } => *updated_at,
+        }
+    }
+
+    /// Returns `true` if the repo details item is [`Found`].
+    ///
+    /// [`Found`]: RepoDetailsItem::Found
+    #[must_use]
+    pub fn is_found(&self) -> bool {
+        matches!(self, Self::Found(..))
+    }
 }
 
 #[derive(Clone, Debug)]

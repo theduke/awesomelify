@@ -4,7 +4,11 @@ mod ui;
 use std::{net::SocketAddr, time::Duration};
 
 use anyhow::Context;
-use axum::{http::StatusCode, routing::get, Router};
+use axum::{
+    http::StatusCode,
+    routing::{get, post},
+    Router,
+};
 use tower_http::trace::TraceLayer;
 
 use crate::{
@@ -66,6 +70,9 @@ async fn run_server(addr: SocketAddr, ctx: Ctx) -> Result<(), anyhow::Error> {
             "/repo/:source/:owner/:repo",
             get(routes::repo_page::handler_repo),
         )
+        // API
+        .route("/api/export", get(routes::api_export::handler_api_export))
+        .route("/api/import", post(routes::api_import::handler_api_import))
         .with_state(ctx)
         .layer(
             TraceLayer::new_for_http()
@@ -119,6 +126,51 @@ async fn shutdown_signal() {
     }
 
     tracing::info!("received shutdown signal");
+}
+
+struct ApiError {
+    message: String,
+    status: StatusCode,
+    source: Option<anyhow::Error>,
+}
+
+impl ApiError {
+    pub fn msg(message: impl Into<String>, status: StatusCode) -> Self {
+        Self {
+            message: message.into(),
+            status,
+            source: None,
+        }
+    }
+}
+
+impl From<anyhow::Error> for ApiError {
+    fn from(source: anyhow::Error) -> Self {
+        Self {
+            message: source.to_string(),
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            source: Some(source),
+        }
+    }
+}
+
+impl axum::response::IntoResponse for ApiError {
+    fn into_response(self) -> axum::response::Response<axum::body::Body> {
+        let data = serde_json::json!({
+            "error": {
+                "message": &self.message,
+                "source": self.source.as_ref().map(|x| format!("{:#?}", x))
+            }
+        });
+
+        let body = serde_json::to_vec(&data).unwrap();
+
+        axum::http::Response::builder()
+            .status(self.status)
+            .header("content-type", "application/json")
+            .body(axum::body::Body::from(body))
+            .unwrap()
+    }
 }
 
 struct HtmlError {
