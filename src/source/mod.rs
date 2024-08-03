@@ -148,7 +148,7 @@ impl std::fmt::Display for RepoIdent {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ReadmeRepo {
     pub details: RepoDetails,
     pub readme_content: String,
@@ -162,7 +162,7 @@ pub struct RepoLink {
     pub section: Vec<String>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RepoDetails {
     pub ident: RepoIdent,
 
@@ -220,7 +220,7 @@ impl RepoDetails {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum RepoDetailsItem {
     Found(RepoDetails),
     NotFound {
@@ -245,19 +245,19 @@ impl RepoDetailsItem {
         matches!(self, Self::NotFound { .. })
     }
 
-    pub fn updated_at(&self) -> OffsetDateTime {
-        match self {
-            Self::Found(x) => x.updated_at,
-            Self::NotFound { updated_at, .. } => *updated_at,
-        }
-    }
-
     /// Returns `true` if the repo details item is [`Found`].
     ///
     /// [`Found`]: RepoDetailsItem::Found
     #[must_use]
     pub fn is_found(&self) -> bool {
         matches!(self, Self::Found(..))
+    }
+
+    pub fn updated_at(&self) -> OffsetDateTime {
+        match self {
+            Self::Found(x) => x.updated_at,
+            Self::NotFound { updated_at, .. } => *updated_at,
+        }
     }
 }
 

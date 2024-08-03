@@ -45,7 +45,7 @@ pub trait Storage {
 
 /// Represents any kind of item in storage.
 /// Used for imports and exports.
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Item {
     Repo(RepoDetailsItem),
     ReadmeRepo(ReadmeRepo),
