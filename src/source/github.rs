@@ -372,24 +372,39 @@ where
 mod tests {
     use super::*;
 
-    fn test_client() -> GithubClient {
-        let token = std::env::var("GITHUB_TOKEN").ok();
-        GithubClient::new(token)
+    fn test_client() -> Option<GithubClient> {
+        let token = std::env::var("GITHUB_TOKEN").ok()?;
+        Some(GithubClient::new(Some(token)))
+    }
+
+    macro_rules! test_client {
+        () => {
+            if let Some(client) = test_client() {
+                client
+            } else {
+                eprintln!("Skipping Github API test: GITHUB_TOKEN not set!");
+                return;
+            }
+        };
     }
 
     #[tokio::test]
     async fn test_github_client_readme() {
+        let client = test_client!();
+
         let id = RepoIdent::new_github("rust-unofficial", "awesome-rust");
-        let readme = test_client().repo_readme(&id).await.unwrap();
+        let readme = client.repo_readme(&id).await.unwrap();
 
         assert!(readme.contains("Awesome Rust"));
     }
 
     #[tokio::test]
     async fn test_github_repo_details() {
+        let client = test_client!();
+
         // let id = RepoIdent::new_github("theduke", "easyduration");
         let id = RepoIdent::new_github("rust-unofficial", "awesome-rust");
-        let data = test_client().repo_details(&id).await.unwrap().unwrap();
+        let data = client.repo_details(&id).await.unwrap().unwrap();
         assert!(data.ident == id);
         assert!(data.stargazer_count >= 2);
         assert!(data.fork_count > 0);
