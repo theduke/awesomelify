@@ -13,10 +13,17 @@ pub struct FsStore {
 
 impl FsStore {
     pub fn new(root: PathBuf) -> Result<Self, anyhow::Error> {
-        std::fs::create_dir_all(&root)
-            .with_context(|| format!("failed to create root directory: '{}'", root.display()))?;
+        let s = Self { root };
 
-        Ok(Self { root })
+        let p = s.repo_details_dir();
+        std::fs::create_dir_all(&p)
+            .with_context(|| format!("failed to create directory: '{}'", p.display()))?;
+
+        let p = s.readme_repo_dir();
+        std::fs::create_dir_all(&p)
+            .with_context(|| format!("failed to create directory: '{}'", p.display()))?;
+
+        Ok(s)
     }
 
     fn repo_details_dir(&self) -> PathBuf {
