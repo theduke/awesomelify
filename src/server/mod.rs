@@ -1,7 +1,7 @@
 mod routes;
 mod ui;
 
-use std::{net::SocketAddr, time::Duration};
+use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
 use anyhow::Context;
 use axum::{
@@ -14,34 +14,41 @@ use tower_http::trace::TraceLayer;
 use crate::{
     loader::Loader,
     source::{github::GithubClient, loader::SourceLoader, RepoIdent},
-    storage::Store,
+    storage::{fs::FsStore, Store},
 };
 
-pub struct ServerBuilder {
-    pub port: u16,
-    pub store: Store,
+pub struct CtxBuilder {
+    pub data_dir: PathBuf,
+    pub github_token: Option<String>,
 }
 
-impl ServerBuilder {
-    pub fn new(store: Store) -> Self {
+impl CtxBuilder {
+    pub fn new(data_dir: PathBuf) -> Self {
         Self {
-            port: DEFAULT_PORT,
-            store,
+            data_dir,
+            github_token: None,
         }
     }
 
-    pub async fn run(self) -> Result<(), anyhow::Error> {
-        let ctx = Ctx::new(self.store);
-        let addr = SocketAddr::from(([0, 0, 0, 0], self.port));
-        run_server(addr, ctx).await
+    pub fn github_token(mut self, token: Option<String>) -> Self {
+        self.github_token = token;
+        self
+    }
+
+    pub fn build(self) -> Result<Ctx, anyhow::Error> {
+        let github = GithubClient::new(self.github_token);
+        let sources = SourceLoader::new(github);
+        let store = Store::Fs(FsStore::new(self.data_dir)?);
+
+        let loader = Loader::start(store.clone(), sources);
+
+        Ok(Ctx { store, loader })
     }
 }
 
-const DEFAULT_PORT: u16 = 3333;
-
 /// Server context.
 #[derive(Clone)]
-struct Ctx {
+pub struct Ctx {
     #[allow(dead_code)]
     store: Store,
     loader: Loader,
@@ -55,7 +62,15 @@ impl Ctx {
 
         Ctx { store, loader }
     }
+
+    pub async fn run_server(self, port: u16) -> Result<(), anyhow::Error> {
+        let ctx = Ctx::new(self.store);
+        let addr = SocketAddr::from(([0, 0, 0, 0], port));
+        run_server(addr, ctx).await
+    }
 }
+
+pub const DEFAULT_PORT: u16 = 3333;
 
 fn build_router(ctx: Ctx) -> Router {
     Router::new()

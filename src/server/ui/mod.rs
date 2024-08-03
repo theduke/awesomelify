@@ -683,6 +683,12 @@ pub fn PageLayout<'a>(title: &'a str, children: Element<'a>) -> Element {
                     crossorigin: "anonymous",
                 }
 
+                script {
+                    defer: true,
+                    data_domain: "awesomelify.condacity.io",
+                    src: "https://plausible.app.condacity.io/js/script.js",
+                }
+
                 title {
                     "{title}"
                 }
