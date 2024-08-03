@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 
-use anyhow::Context;
-use awesomelify::storage::fs::FsStore;
 use tracing_subscriber::EnvFilter;
 
 #[derive(clap::Parser)]
@@ -28,6 +26,7 @@ pub struct CmdServe {
     #[clap(long, env = "DATA_DIR", default_value = "data")]
     data_dir: PathBuf,
 
+    /// Github token to use for Github API requests.
     #[clap(long, env = "GITHUB_TOKEN")]
     github_token: Option<String>,
 }
@@ -38,10 +37,10 @@ impl CmdServe {
         let filter = EnvFilter::try_from_default_env().unwrap_or("info".parse().unwrap());
         tracing_subscriber::fmt().with_env_filter(filter).init();
 
-        let store = FsStore::new(self.data_dir).context("could not open FS store")?;
-
-        awesomelify::server::ServerBuilder::new(store.into())
-            .run()
+        awesomelify::server::CtxBuilder::new(self.data_dir)
+            .github_token(self.github_token)
+            .build()?
+            .run_server(awesomelify::server::DEFAULT_PORT)
             .await?;
 
         Ok(())
