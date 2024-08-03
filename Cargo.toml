@@ -23,3 +23,8 @@ tower-http = { version = "0.5.2", features = ["trace", "timeout"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "fmt", "time"] }
 url = { version = "2.5.2", features = ["serde"] }
+
+[dev-dependencies]
+axum-test-helper = "0.4.0"
+pretty_assertions = "1.4.0"
+tempfile = "3.11.0"

@@ -31,15 +31,7 @@ impl ServerBuilder {
     }
 
     pub async fn run(self) -> Result<(), anyhow::Error> {
-        let github = GithubClient::from_env();
-        let sources = SourceLoader::new(github);
-        let loader = Loader::start(self.store.clone(), sources);
-
-        let ctx = Ctx {
-            store: self.store,
-            loader,
-        };
-
+        let ctx = Ctx::new(self.store);
         let addr = SocketAddr::from(([0, 0, 0, 0], self.port));
         run_server(addr, ctx).await
     }
@@ -55,8 +47,18 @@ struct Ctx {
     loader: Loader,
 }
 
-async fn run_server(addr: SocketAddr, ctx: Ctx) -> Result<(), anyhow::Error> {
-    let app = Router::new()
+impl Ctx {
+    pub fn new(store: Store) -> Self {
+        let github = GithubClient::from_env();
+        let sources = SourceLoader::new(github);
+        let loader = Loader::start(store.clone(), sources);
+
+        Ctx { store, loader }
+    }
+}
+
+fn build_router(ctx: Ctx) -> Router {
+    Router::new()
         .route("/", get(routes::homepage::handler_homepage))
         .route(
             routes::search::PATH_SEARCH,
@@ -71,8 +73,14 @@ async fn run_server(addr: SocketAddr, ctx: Ctx) -> Result<(), anyhow::Error> {
             get(routes::repo_page::handler_repo),
         )
         // API
-        .route("/api/export", get(routes::api_export::handler_api_export))
-        .route("/api/import", post(routes::api_import::handler_api_import))
+        .route(
+            routes::api_export::PATH_API_EXPORT,
+            get(routes::api_export::handler_api_export),
+        )
+        .route(
+            routes::api_import::PATH_API_IMPORT,
+            post(routes::api_import::handler_api_import),
+        )
         .with_state(ctx)
         .layer(
             TraceLayer::new_for_http()
@@ -87,8 +95,10 @@ async fn run_server(addr: SocketAddr, ctx: Ctx) -> Result<(), anyhow::Error> {
             // Graceful shutdown will wait for outstanding requests to complete.
             // Add a timeout so requests don't hang forever.
             tower_http::timeout::TimeoutLayer::new(Duration::from_secs(30)),
-        );
+        )
+}
 
+async fn run_server(addr: SocketAddr, ctx: Ctx) -> Result<(), anyhow::Error> {
     tracing::info!("starting server: {}", addr);
 
     // run our app with hyper, listening globally on port 3000
@@ -96,6 +106,7 @@ async fn run_server(addr: SocketAddr, ctx: Ctx) -> Result<(), anyhow::Error> {
         .await
         .context("could not bind port")?;
 
+    let app = build_router(ctx);
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await
@@ -233,4 +244,22 @@ impl axum::response::IntoResponse for HtmlErrorPage {
 
 fn repo_page_uri(ident: &RepoIdent) -> String {
     format!("/repo/{}/{}/{}", ident.source, ident.owner, ident.repo)
+}
+
+#[cfg(test)]
+async fn test_client_with_store(store: Store) -> axum_test_helper::TestClient {
+    let ctx = Ctx::new(store);
+    let app = build_router(ctx);
+    axum_test_helper::TestClient::new(app).await
+}
+
+#[cfg(test)]
+async fn test_client() -> (axum_test_helper::TestClient, tempfile::TempDir) {
+    let dir = tempfile::TempDir::new().expect("could not create tmp dir for storage");
+    let fs =
+        crate::storage::fs::FsStore::new(dir.path().to_owned()).expect("could not create FsStore");
+    let store = Store::Fs(fs);
+
+    let client = test_client_with_store(store).await;
+    (client, dir)
 }
